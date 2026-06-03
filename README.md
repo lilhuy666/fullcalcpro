@@ -1,3 +1,7 @@
+Ошибка подключения к БД: Authentication plugin 'caching_sha2_password' is not supported
+PS C:\Users\demo.SERVERSTUD\AppData\Local\Programs\Microsoft VS Code> 
+
+
 import tkinter as tk
 from tkinter import ttk, messagebox
 import mysql.connector
