@@ -1,78 +1,86 @@
-Ошибка подключения к БД: Authentication plugin 'caching_sha2_password' is not supported
-PS C:\Users\demo.SERVERSTUD\AppData\Local\Programs\Microsoft VS Code> 
-
-
 import tkinter as tk
 from tkinter import ttk, messagebox
 import mysql.connector
-import os
-from PIL import Image, ImageTk
 
 # ================== НАСТРОЙКА ПОДКЛЮЧЕНИЯ К БД ==================
 try:
     conn = mysql.connector.connect(
         host="localhost",
         user="root",
-        password="1234",        # <-- ВАШ ПАРОЛЬ MYSQL
-        database="shop_db"
+        password="1234",        # ВАШ ПАРОЛЬ MYSQL
+        database="shop_db",
+        auth_plugin='mysql_native_password'
     )
     cursor = conn.cursor(dictionary=True)
+    print("✅ Подключение к БД успешно установлено")
 except mysql.connector.Error as err:
-    print("Ошибка подключения к БД:", err)
+    print(f"❌ Ошибка подключения к БД: {err}")
+    print("\n📌 Если ошибка связана с плагином аутентификации, выполните в MySQL:")
+    print("ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '1234';")
+    print("FLUSH PRIVILEGES;")
     exit()
 
-# Путь к картинке-заглушке
-PLACEHOLDER_PATH = "picture.png"
-
-# ================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==================
-def get_placeholder_image(size=(120, 120)):
-    """Возвращает PhotoImage заглушки. Если файла нет — серая картинка."""
-    if os.path.exists(PLACEHOLDER_PATH):
-        try:
-            img = Image.open(PLACEHOLDER_PATH).resize(size, Image.LANCZOS)
-            return ImageTk.PhotoImage(img)
-        except Exception:
-            pass
-    # Создаём серую заглушку если файл не найден или повреждён
-    img = Image.new('RGB', size, color='#CCCCCC')
-    return ImageTk.PhotoImage(img)
-
-def load_product_image(image_path, size=(120, 120)):
-    """Загружает фото товара или возвращает заглушку."""
-    if image_path and os.path.exists(image_path):
-        try:
-            img = Image.open(image_path).resize(size, Image.LANCZOS)
-            return ImageTk.PhotoImage(img)
-        except Exception:
-            pass
-    return get_placeholder_image(size)
-
-# ================== ГЛАВНЫЙ ЭКРАН ВХОДА ==================
+# ================== ГЛАВНОЕ ОКНО ВХОДА ==================
 class LoginWindow:
     def __init__(self, master):
         self.master = master
-        self.master.title("Авторизация")
-        self.master.geometry("350x250")
+        self.master.title("Авторизация - Магазин")
+        self.master.geometry("400x350")
         self.master.resizable(False, False)
-        self.current_window = None  # Отслеживаем открытое окно
+        self.master.configure(bg="#F0F0F0")
+        self.current_window = None
+        
+        # Центрирование окна
+        self.master.update_idletasks()
+        width = self.master.winfo_width()
+        height = self.master.winfo_height()
+        x = (self.master.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.master.winfo_screenheight() // 2) - (height // 2)
+        self.master.geometry(f'{width}x{height}+{x}+{y}')
 
-        tk.Label(master, text="Логин", font=("Arial", 12)).pack(pady=5)
-        self.entry_user = tk.Entry(master, font=("Arial", 12))
-        self.entry_user.pack(pady=2)
+        # Заголовок
+        tk.Label(master, text="🔐 АВТОРИЗАЦИЯ", font=("Arial", 18, "bold"), 
+                bg="#F0F0F0", fg="#2C3E50").pack(pady=20)
+        
+        # Рамка для полей ввода
+        frame = tk.Frame(master, bg="white", relief="groove", bd=2)
+        frame.pack(pady=20, padx=30, fill="both")
+        
+        tk.Label(frame, text="Логин:", font=("Arial", 12), 
+                bg="white", fg="#2C3E50").pack(pady=(15, 5))
+        self.entry_user = tk.Entry(frame, font=("Arial", 14), width=25, 
+                                   justify="center")
+        self.entry_user.pack(pady=5, padx=20)
+        self.entry_user.insert(0, "admin")  # Подсказка
+        self.entry_user.focus()
 
-        tk.Label(master, text="Пароль", font=("Arial", 12)).pack(pady=5)
-        self.entry_pass = tk.Entry(master, show="*", font=("Arial", 12))
-        self.entry_pass.pack(pady=2)
+        tk.Label(frame, text="Пароль:", font=("Arial", 12), 
+                bg="white", fg="#2C3E50").pack(pady=(10, 5))
+        self.entry_pass = tk.Entry(frame, show="*", font=("Arial", 14), 
+                                   width=25, justify="center")
+        self.entry_pass.pack(pady=5, padx=20)
+        self.entry_pass.insert(0, "123")  # Подсказка
+        
+        # Привязка Enter к входу
+        self.entry_pass.bind('<Return>', lambda event: self.login())
 
-        tk.Button(master, text="Войти", font=("Arial", 12), width=15,
-                  command=self.login).pack(pady=8)
+        # Кнопка входа
+        tk.Button(master, text="🚪 ВОЙТИ", font=("Arial", 14, "bold"), 
+                  width=20, height=2, bg="#2ECC71", fg="white",
+                  command=self.login, cursor="hand2", relief="flat").pack(pady=15)
 
-        tk.Button(master, text="Войти как гость", font=("Arial", 10),
-                  command=self.guest_login).pack()
+        # Кнопка гостя
+        tk.Button(master, text="👤 ВОЙТИ КАК ГОСТЬ", font=("Arial", 12),
+                  width=20, height=2, bg="#3498DB", fg="white",
+                  command=self.guest_login, cursor="hand2", relief="flat").pack(pady=5)
+        
+        # Информация
+        tk.Label(master, text="Тестовые логины: admin, manager, client\nПароль: 123", 
+                font=("Arial", 9), bg="#F0F0F0", fg="#7F8C8D").pack(pady=15)
 
     def login(self):
-        user = self.entry_user.get()
-        pwd = self.entry_pass.get()
+        user = self.entry_user.get().strip()
+        pwd = self.entry_pass.get().strip()
 
         if not user or not pwd:
             messagebox.showwarning("Предупреждение", "Введите логин и пароль")
@@ -84,73 +92,117 @@ class LoginWindow:
             result = cursor.fetchone()
 
             if result:
-                self.master.withdraw()
-                role = result['role']
-                
-                if self.current_window is not None:
-                    self.current_window.destroy()
-                
-                if role == 'admin':
-                    self.current_window = AdminWindow(self.master, result)
-                elif role == 'manager':
-                    self.current_window = ManagerWindow(self.master, result)
-                elif role == 'client':
-                    self.current_window = ClientWindow(self.master, result)
-                else:
-                    self.current_window = GuestWindow(self.master, None)
+                self.open_role_window(result)
             else:
                 messagebox.showerror("Ошибка", "Неверный логин или пароль")
         except mysql.connector.Error as err:
-            messagebox.showerror("Ошибка БД", str(err))
+            messagebox.showerror("Ошибка БД", f"Ошибка при входе: {err}")
 
     def guest_login(self):
-        if self.current_window is not None:
-            self.current_window.destroy()
-        
+        self.open_role_window(None)
+
+    def open_role_window(self, user):
         self.master.withdraw()
-        self.current_window = GuestWindow(self.master, None)
-
-# ================== БАЗОВЫЙ КЛАСС ОКНА С ТОВАРАМИ ==================
-class ProductListMixin:
-    """Примесь для отображения списка товаров с подсветкой и форматированием."""
-    def create_product_list(self, parent_frame):
-        """Создаёт прокручиваемую область с товарами."""
-        # Canvas + Scrollbar
-        self.canvas = tk.Canvas(parent_frame, highlightthickness=0, bg="#F5F5F5")
-        scrollbar = ttk.Scrollbar(parent_frame, orient="vertical", command=self.canvas.yview)
-        self.scrollable_frame = ttk.Frame(self.canvas)
-
-        self.scrollable_frame.bind("<Configure>",
-            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
-
-        self.canvas_window = self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
-
-        # Привязка изменения ширины canvas к ширине scrollable_frame
-        self.canvas.bind('<Configure>', self._configure_canvas)
-
-        self.canvas.configure(yscrollcommand=scrollbar.set)
-
-        self.canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
         
-        # Привязка колеса мыши
-        self.canvas.bind('<MouseWheel>', self._on_mousewheel)
+        if self.current_window is not None:
+            try:
+                self.current_window.destroy()
+            except:
+                pass
+        
+        try:
+            if user is None:
+                self.current_window = GuestWindow(self.master)
+            else:
+                role = user.get('role', 'guest')
+                
+                if role == 'admin':
+                    self.current_window = AdminWindow(self.master, user)
+                elif role == 'manager':
+                    self.current_window = ManagerWindow(self.master, user)
+                elif role == 'client':
+                    self.current_window = ClientWindow(self.master, user)
+                else:
+                    self.current_window = GuestWindow(self.master)
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Не удалось открыть окно: {e}")
+            self.master.deiconify()
 
-        # Загружаем товары
+# ================== БАЗОВЫЙ КЛАСС ДЛЯ ВСЕХ РОЛЕЙ ==================
+class BaseWindow:
+    def __init__(self, master, user=None):
+        self.master = master
+        self.user = user
+        self.window = tk.Toplevel(master)
+        self.window.title("Магазин")
+        self.window.state('zoomed')  # На весь экран
+        self.window.configure(bg="#ECF0F1")
+        self.window.protocol("WM_DELETE_WINDOW", self.logout)
+        
+        self.create_top_bar()
+        self.create_main_content()
+
+    def create_top_bar(self):
+        """Создание верхней панели с ФИО и кнопкой выхода"""
+        top_bar = tk.Frame(self.window, bg="#2C3E50", height=60)
+        top_bar.pack(fill="x", side="top")
+        top_bar.pack_propagate(False)
+
+        # Информация о пользователе
+        if self.user:
+            full_name = self.user.get('full_name', 'Пользователь')
+            role = self.user.get('role', '')
+            role_names = {
+                'admin': 'Администратор',
+                'manager': 'Менеджер',
+                'client': 'Клиент'
+            }
+            role_display = role_names.get(role, role)
+            user_info = f"👤 {full_name} | {role_display}"
+        else:
+            user_info = "👤 Гость | Просмотр товаров"
+
+        tk.Label(top_bar, text=user_info,
+                 font=("Arial", 14, "bold"), fg="white", bg="#2C3E50").pack(
+                     side="left", padx=30, pady=15)
+
+        # Кнопка выхода
+        tk.Button(top_bar, text="🚪 ВЫЙТИ", font=("Arial", 12, "bold"),
+                 bg="#E74C3C", fg="white", relief="flat", cursor="hand2",
+                 command=self.logout, width=15, height=2).pack(
+                     side="right", padx=20, pady=10)
+
+    def create_main_content(self):
+        """Создание основного содержимого"""
+        # Заголовок
+        if self.user:
+            role = self.user.get('role', '')
+            titles = {
+                'admin': '📋 ПАНЕЛЬ АДМИНИСТРАТОРА',
+                'manager': '📋 ПАНЕЛЬ МЕНЕДЖЕРА',
+                'client': '📋 ЛИЧНЫЙ КАБИНЕТ КЛИЕНТА'
+            }
+            title_text = titles.get(role, '📋 ПАНЕЛЬ ПОЛЬЗОВАТЕЛЯ')
+        else:
+            title_text = '📋 ПРОСМОТР ТОВАРОВ (ГОСТЬ)'
+        
+        tk.Label(self.window, text=title_text, font=("Arial", 18, "bold"),
+                bg="#ECF0F1", fg="#2C3E50").pack(pady=20)
+
+        # Разделительная линия
+        ttk.Separator(self.window, orient='horizontal').pack(fill='x', padx=20)
+
+        # Контейнер для списка товаров
+        self.products_frame = tk.Frame(self.window, bg="#ECF0F1")
+        self.products_frame.pack(fill="both", expand=True, padx=20, pady=10)
+        
+        # Загрузка товаров
         self.load_products()
 
-    def _configure_canvas(self, event):
-        """Подгоняет ширину внутреннего фрейма под canvas"""
-        self.canvas.itemconfig(self.canvas_window, width=event.width)
-
-    def _on_mousewheel(self, event):
-        """Прокрутка колёсиком мыши"""
-        self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
-
     def load_products(self):
-        """Запрашивает товары из БД и рисует карточки."""
-        # Очистка старых виджетов
-        for widget in self.scrollable_frame.winfo_children():
+        """Загрузка и отображение списка товаров"""
+        # Очистка предыдущих товаров
+        for widget in self.products_frame.winfo_children():
             widget.destroy()
 
         try:
@@ -163,230 +215,240 @@ class ProductListMixin:
             products = cursor.fetchall()
 
             if not products:
-                tk.Label(self.scrollable_frame, text="Товары не найдены", 
-                        font=("Arial", 14), fg="gray").pack(pady=50)
+                tk.Label(self.products_frame, text="📦 Товары не найдены",
+                        font=("Arial", 16), bg="#ECF0F1", fg="#95A5A6").pack(pady=50)
                 return
 
+            # Создание прокручиваемой области
+            canvas = tk.Canvas(self.products_frame, bg="#ECF0F1", highlightthickness=0)
+            scrollbar = ttk.Scrollbar(self.products_frame, orient="vertical", command=canvas.yview)
+            scroll_frame = tk.Frame(canvas, bg="#ECF0F1")
+
+            scroll_frame.bind("<Configure>", 
+                lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+
+            canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
+            canvas.configure(yscrollcommand=scrollbar.set)
+
+            # Привязка колеса мыши
+            def on_mousewheel(event):
+                canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+            canvas.bind_all("<MouseWheel>", on_mousewheel)
+
+            canvas.pack(side="left", fill="both", expand=True)
+            scrollbar.pack(side="right", fill="y")
+
+            # Отображение товаров
             for product in products:
-                self.create_product_card(product)
+                self.create_product_card(scroll_frame, product)
 
         except mysql.connector.Error as err:
             messagebox.showerror("Ошибка", f"Не удалось загрузить товары: {err}")
 
-    def create_product_card(self, product):
-        """Создаёт карточку одного товара с учётом скидки и наличия."""
-        discount = int(product['discount'] or 0)
-        count = int(product['count'] or 0)
+    def create_product_card(self, parent, product):
+        """Создание карточки товара"""
+        discount = int(product.get('discount') or 0)
+        count = int(product.get('count') or 0)
         price = float(product['price'])
         final_price = price * (1 - discount / 100) if discount else price
 
-        # Определяем цвет фона
-        bg_color = "#FFFFFF"
+        # Определение цвета фона
         if count == 0:
-            bg_color = "#D3D3D3"  # Серый, если нет на складе
+            bg_color = "#E0E0E0"  # Серый - нет в наличии
+            border_color = "#BDBDBD"
         elif discount > 15:
-            bg_color = "#483D8B"  # Тёмно-синий, если скидка >15%
-
-        fg_color = "white" if bg_color == "#483D8B" else "black"
+            bg_color = "#E8EAF6"  # Синий - большая скидка
+            border_color = "#3F51B5"
+        elif discount > 0:
+            bg_color = "#FFF3E0"  # Оранжевый - есть скидка
+            border_color = "#FF9800"
+        else:
+            bg_color = "#FFFFFF"  # Белый - обычный
+            border_color = "#4CAF50"
 
         # Рамка карточки
-        card_frame = tk.Frame(self.scrollable_frame, bg=bg_color, relief="groove", bd=2)
-        card_frame.pack(fill="x", padx=15, pady=8, ipady=10)
+        card_frame = tk.Frame(parent, bg=bg_color, relief="solid", 
+                              bd=2, highlightbackground=border_color, 
+                              highlightthickness=1)
+        card_frame.pack(fill="x", padx=10, pady=5, ipady=10)
 
-        # Фото товара
-        img = load_product_image(product.get('image_path'))
-        img_label = tk.Label(card_frame, image=img, bg=bg_color, bd=0)
-        img_label.image = img  # сохраняем ссылку
-        img_label.grid(row=0, column=0, rowspan=6, padx=15, pady=10, sticky="n")
+        # Левая часть - основная информация
+        left_frame = tk.Frame(card_frame, bg=bg_color)
+        left_frame.pack(side="left", fill="both", expand=True, padx=15, pady=10)
 
-        # Информация о товаре
-        info_frame = tk.Frame(card_frame, bg=bg_color)
-        info_frame.grid(row=0, column=1, sticky="w", padx=15)
-
-        # Название и категория
+        # Категория и название
         category = product.get('category_name', 'Без категории')
         name = product.get('name', 'Без названия')
-        tk.Label(info_frame, text=f"{category} | {name}",
-                 font=("Arial", 14, "bold"), bg=bg_color, fg=fg_color).pack(anchor="w", pady=(0, 5))
+        tk.Label(left_frame, text=f"{category} | {name}",
+                font=("Arial", 13, "bold"), bg=bg_color, 
+                fg="#2C3E50", anchor="w").pack(fill="x")
 
-        # Детали
-        details = [
-            f"📝 Описание: {product.get('description') or 'Нет описания'}",
-            f"🏭 Производитель: {product.get('manufacturer') or 'Не указан'}",
-            f"🚚 Поставщик: {product.get('supplier') or 'Не указан'}",
-        ]
+        # Описание
+        description = product.get('description', 'Нет описания')
+        if len(description) > 100:
+            description = description[:100] + "..."
+        tk.Label(left_frame, text=f"📝 {description}",
+                font=("Arial", 10), bg=bg_color, 
+                fg="#546E7A", anchor="w", wraplength=500).pack(fill="x", pady=(5, 0))
 
-        for d in details:
-            tk.Label(info_frame, text=d, font=("Arial", 10), bg=bg_color, fg=fg_color,
-                     justify="left").pack(anchor="w", pady=1)
+        # Дополнительная информация
+        info_text = f"🏭 {product.get('manufacturer', 'Не указан')} | "
+        info_text += f"🚚 {product.get('supplier', 'Не указан')} | "
+        info_text += f"📏 {product.get('unit', 'шт')}"
+        tk.Label(left_frame, text=info_text,
+                font=("Arial", 9), bg=bg_color, 
+                fg="#78909C", anchor="w").pack(fill="x", pady=(5, 0))
 
-        # Цена
-        price_frame = tk.Frame(info_frame, bg=bg_color)
-        price_frame.pack(anchor="w", pady=5)
+        # Правая часть - цена и количество
+        right_frame = tk.Frame(card_frame, bg=bg_color)
+        right_frame.pack(side="right", padx=20, pady=10)
 
+        # Цена со скидкой
         if discount > 0:
-            # Зачёркнутая старая цена
-            tk.Label(price_frame, text=f"{price:.2f} руб.", font=("Arial", 11, "overstrike"),
-                     fg="red", bg=bg_color).pack(side="left", padx=(0, 15))
-            # Новая цена
-            tk.Label(price_frame, text=f"{final_price:.2f} руб.", font=("Arial", 12, "bold"),
-                     fg="black" if bg_color != "#483D8B" else "white", bg=bg_color).pack(side="left")
+            tk.Label(right_frame, text=f"{price:.2f} руб.",
+                    font=("Arial", 11, "overstrike"), 
+                    bg=bg_color, fg="#E74C3C").pack(anchor="e")
+            tk.Label(right_frame, text=f"{final_price:.2f} руб.",
+                    font=("Arial", 16, "bold"), 
+                    bg=bg_color, fg="#2ECC71").pack(anchor="e")
         else:
-            tk.Label(price_frame, text=f"💰 Цена: {price:.2f} руб.", font=("Arial", 11, "bold"),
-                     bg=bg_color, fg=fg_color).pack(anchor="w")
+            tk.Label(right_frame, text=f"{price:.2f} руб.",
+                    font=("Arial", 16, "bold"), 
+                    bg=bg_color, fg="#2ECC71").pack(anchor="e")
 
-        # Остальные поля
-        more_info = [
-            f"📏 Единица измерения: {product.get('unit', 'шт')}",
-            f"📊 Количество на складе: {count} {'❌ Нет в наличии' if count == 0 else '✅ В наличии'}",
-            f"🏷️ Действующая скидка: {discount}%"
-        ]
-        for m in more_info:
-            tk.Label(info_frame, text=m, font=("Arial", 10), bg=bg_color, fg=fg_color).pack(anchor="w", pady=1)
-
-# ================== ОКНА ДЛЯ РАЗНЫХ РОЛЕЙ ==================
-class BaseRoleWindow:
-    """Базовый класс для окон ролей с заголовком ФИО и кнопкой выхода."""
-    def __init__(self, master, user):
-        self.master = master
-        self.user = user
-        self.window = tk.Toplevel(master)
-        self.window.state('zoomed')  # На весь экран
-        self.window.protocol("WM_DELETE_WINDOW", self.logout)
-
-        # Верхняя панель с ФИО и кнопкой выхода
-        top_bar = tk.Frame(self.window, bg="#2C3E50", height=50)
-        top_bar.pack(fill="x", side="top")
-        top_bar.pack_propagate(False)
-
-        # ФИО пользователя
-        if user:
-            full_name = user.get('full_name', 'Пользователь')
-            role = user.get('role', '')
+        # Скидка
+        if discount > 0:
+            tk.Label(right_frame, text=f"Скидка {discount}%",
+                    font=("Arial", 10, "bold"), 
+                    bg="#FF5252", fg="white").pack(anchor="e", pady=(5, 5))
         else:
-            full_name = 'Гость'
-            role = 'guest'
+            tk.Label(right_frame, text="Без скидки",
+                    font=("Arial", 10), 
+                    bg=bg_color, fg="#90A4AE").pack(anchor="e", pady=(5, 5))
 
-        tk.Label(top_bar, text=f"👤 {full_name} ({role})",
-                 font=("Arial", 12, "bold"), fg="white", bg="#2C3E50").pack(side="left", padx=20, pady=10)
-
-        # Кнопка выхода
-        tk.Button(top_bar, text="🚪 Выход", command=self.logout,
-                 font=("Arial", 10, "bold"), bg="#E74C3C", fg="white",
-                 relief="flat", cursor="hand2").pack(side="right", padx=20, pady=8)
-
-        # Заголовок окна
-        role_names = {
-            'admin': 'Администратор',
-            'manager': 'Менеджер',
-            'client': 'Клиент',
-            'guest': 'Гость'
-        }
-        role_name = role_names.get(role, 'Пользователь')
-        tk.Label(self.window, text=f"📋 Панель {role_name}",
-                 font=("Arial", 18, "bold"), fg="#2C3E50").pack(pady=15)
-
-        # Разделительная линия
-        ttk.Separator(self.window, orient='horizontal').pack(fill='x', padx=20)
+        # Наличие
+        if count > 0:
+            tk.Label(right_frame, text=f"✅ В наличии: {count} {product.get('unit', 'шт')}",
+                    font=("Arial", 10, "bold"), 
+                    bg="#C8E6C9", fg="#2E7D32", 
+                    relief="solid", padx=10, pady=3).pack(anchor="e")
+        else:
+            tk.Label(right_frame, text="❌ Нет в наличии",
+                    font=("Arial", 10, "bold"), 
+                    bg="#FFCDD2", fg="#C62828", 
+                    relief="solid", padx=10, pady=3).pack(anchor="e")
 
     def logout(self):
-        """Возврат на окно входа."""
+        """Выход из системы"""
         self.window.destroy()
-        self.master.deiconify()  # Показать окно входа
+        self.master.deiconify()
 
-# Миксины для расширения функционала
-class AdminMixin:
-    def setup_admin_controls(self):
-        controls_frame = tk.Frame(self.window, bg="#ECF0F1")
-        controls_frame.pack(fill="x", padx=20, pady=10)
-        
-        tk.Label(controls_frame, text="🔧 Панель управления:", 
-                font=("Arial", 12, "bold"), bg="#ECF0F1").pack(side="left", padx=10)
-        
-        tk.Button(controls_frame, text="👥 Пользователи (скоро)", 
-                 font=("Arial", 10), bg="#3498DB", fg="white",
-                 relief="flat", cursor="hand2").pack(side="left", padx=5)
-        
-        tk.Button(controls_frame, text="📦 Товары (скоро)", 
-                 font=("Arial", 10), bg="#2ECC71", fg="white",
-                 relief="flat", cursor="hand2").pack(side="left", padx=5)
-        
-        tk.Button(controls_frame, text="📊 Отчёты (скоро)", 
-                 font=("Arial", 10), bg="#F39C12", fg="white",
-                 relief="flat", cursor="hand2").pack(side="left", padx=5)
-
-class ManagerMixin:
-    def setup_manager_controls(self):
-        controls_frame = tk.Frame(self.window, bg="#ECF0F1")
-        controls_frame.pack(fill="x", padx=20, pady=10)
-        
-        tk.Label(controls_frame, text="📋 Управление заказами:", 
-                font=("Arial", 12, "bold"), bg="#ECF0F1").pack(side="left", padx=10)
-        
-        tk.Button(controls_frame, text="📝 Заказы (скоро)", 
-                 font=("Arial", 10), bg="#3498DB", fg="white",
-                 relief="flat", cursor="hand2").pack(side="left", padx=5)
-
-class ClientMixin:
-    def setup_client_controls(self):
-        controls_frame = tk.Frame(self.window, bg="#ECF0F1")
-        controls_frame.pack(fill="x", padx=20, pady=10)
-        
-        tk.Label(controls_frame, text="🛒 Мои покупки:", 
-                font=("Arial", 12, "bold"), bg="#ECF0F1").pack(side="left", padx=10)
-        
-        tk.Button(controls_frame, text="📋 История заказов (скоро)", 
-                 font=("Arial", 10), bg="#3498DB", fg="white",
-                 relief="flat", cursor="hand2").pack(side="left", padx=5)
-
-# ================== КОНКРЕТНЫЕ ОКНА ==================
-class AdminWindow(BaseRoleWindow, ProductListMixin, AdminMixin):
+# ================== ОКНА ДЛЯ РАЗНЫХ РОЛЕЙ ==================
+class AdminWindow(BaseWindow):
     def __init__(self, master, user):
         super().__init__(master, user)
         self.window.title("Панель администратора")
-        self.setup_admin_controls()
+        self.create_admin_controls()
 
-        products_frame = tk.Frame(self.window)
-        products_frame.pack(fill="both", expand=True, padx=20, pady=10)
-        self.create_product_list(products_frame)
+    def create_admin_controls(self):
+        """Панель управления администратора"""
+        controls_frame = tk.Frame(self.window, bg="#2C3E50")
+        controls_frame.pack(fill="x", padx=20, pady=(10, 0))
+        
+        tk.Label(controls_frame, text="🔧 ПАНЕЛЬ УПРАВЛЕНИЯ", 
+                font=("Arial", 12, "bold"), fg="white", bg="#2C3E50").pack(
+                    side="left", padx=15, pady=10)
+        
+        buttons = [
+            ("👥 Пользователи", "#3498DB"),
+            ("📦 Товары", "#2ECC71"),
+            ("📊 Отчёты", "#F39C12"),
+            ("⚙️ Настройки", "#9B59B6")
+        ]
+        
+        for text, color in buttons:
+            tk.Button(controls_frame, text=text, font=("Arial", 10),
+                     bg=color, fg="white", relief="flat", 
+                     padx=15, pady=5, cursor="hand2").pack(
+                         side="left", padx=5, pady=10)
 
-class ManagerWindow(BaseRoleWindow, ProductListMixin, ManagerMixin):
+class ManagerWindow(BaseWindow):
     def __init__(self, master, user):
         super().__init__(master, user)
         self.window.title("Панель менеджера")
-        self.setup_manager_controls()
+        self.create_manager_controls()
 
-        products_frame = tk.Frame(self.window)
-        products_frame.pack(fill="both", expand=True, padx=20, pady=10)
-        self.create_product_list(products_frame)
+    def create_manager_controls(self):
+        """Панель управления менеджера"""
+        controls_frame = tk.Frame(self.window, bg="#2C3E50")
+        controls_frame.pack(fill="x", padx=20, pady=(10, 0))
+        
+        tk.Label(controls_frame, text="📋 УПРАВЛЕНИЕ ЗАКАЗАМИ", 
+                font=("Arial", 12, "bold"), fg="white", bg="#2C3E50").pack(
+                    side="left", padx=15, pady=10)
+        
+        buttons = [
+            ("📝 Заказы", "#3498DB"),
+            ("📦 Поставки", "#2ECC71"),
+            ("👥 Клиенты", "#F39C12"),
+            ("📊 Статистика", "#9B59B6")
+        ]
+        
+        for text, color in buttons:
+            tk.Button(controls_frame, text=text, font=("Arial", 10),
+                     bg=color, fg="white", relief="flat", 
+                     padx=15, pady=5, cursor="hand2").pack(
+                         side="left", padx=5, pady=10)
 
-class ClientWindow(BaseRoleWindow, ProductListMixin, ClientMixin):
+class ClientWindow(BaseWindow):
     def __init__(self, master, user):
         super().__init__(master, user)
         self.window.title("Личный кабинет клиента")
-        self.setup_client_controls()
+        self.create_client_controls()
 
-        products_frame = tk.Frame(self.window)
-        products_frame.pack(fill="both", expand=True, padx=20, pady=10)
-        self.create_product_list(products_frame)
+    def create_client_controls(self):
+        """Панель клиента"""
+        controls_frame = tk.Frame(self.window, bg="#2C3E50")
+        controls_frame.pack(fill="x", padx=20, pady=(10, 0))
+        
+        tk.Label(controls_frame, text="🛒 МОИ ПОКУПКИ", 
+                font=("Arial", 12, "bold"), fg="white", bg="#2C3E50").pack(
+                    side="left", padx=15, pady=10)
+        
+        buttons = [
+            ("📋 История заказов", "#3498DB"),
+            ("🛒 Корзина", "#2ECC71"),
+            ("❤️ Избранное", "#E91E63"),
+            ("👤 Профиль", "#9B59B6")
+        ]
+        
+        for text, color in buttons:
+            tk.Button(controls_frame, text=text, font=("Arial", 10),
+                     bg=color, fg="white", relief="flat", 
+                     padx=15, pady=5, cursor="hand2").pack(
+                         side="left", padx=5, pady=10)
 
-class GuestWindow(BaseRoleWindow, ProductListMixin):
-    def __init__(self, master, user):
-        super().__init__(master, user)
+class GuestWindow(BaseWindow):
+    def __init__(self, master):
+        super().__init__(master, None)
         self.window.title("Просмотр товаров (Гость)")
+        
+        # Дополнительное сообщение для гостей
+        guest_frame = tk.Frame(self.window, bg="#FFF9C4")
+        guest_frame.pack(fill="x", padx=20, pady=(10, 0))
+        tk.Label(guest_frame, 
+                text="⚠️ Вы просматриваете товары как гость. Для оформления заказа войдите в систему.",
+                font=("Arial", 10), bg="#FFF9C4", fg="#F57F17", 
+                wraplength=600).pack(pady=10, padx=15)
 
-        products_frame = tk.Frame(self.window)
-        products_frame.pack(fill="both", expand=True, padx=20, pady=10)
-        self.create_product_list(products_frame)
-
-# ================== ЗАПУСК ==================
+# ================== ЗАПУСК ПРИЛОЖЕНИЯ ==================
 if __name__ == "__main__":
     root = tk.Tk()
     app = LoginWindow(root)
     root.mainloop()
 
 
-    -- ============================================
+-- ============================================
 -- СОЗДАНИЕ БАЗЫ ДАННЫХ
 -- ============================================
 DROP DATABASE IF EXISTS shop_db;
@@ -405,13 +467,13 @@ CREATE TABLE Users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Пароли: 123 (в реальном проекте нужно хешировать!)
+-- Добавление тестовых пользователей
 INSERT INTO Users (login, password, role, full_name) VALUES
 ('admin', '123', 'admin', 'Иванов Иван Иванович'),
 ('manager', '123', 'manager', 'Петров Пётр Петрович'),
+('manager2', '123', 'manager', 'Смирнова Елена Викторовна'),
 ('client', '123', 'client', 'Сидорова Анна Сергеевна'),
-('client2', '123', 'client', 'Козлов Дмитрий Александрович'),
-('manager2', '123', 'manager', 'Смирнова Елена Викторовна');
+('client2', '123', 'client', 'Козлов Дмитрий Александрович');
 
 -- ============================================
 -- ТАБЛИЦА КАТЕГОРИЙ
@@ -444,68 +506,65 @@ CREATE TABLE Products (
     unit VARCHAR(20) DEFAULT 'шт',
     count INT DEFAULT 0 CHECK (count >= 0),
     discount INT DEFAULT 0 CHECK (discount >= 0 AND discount <= 100),
-    image_path VARCHAR(500) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (category_id) REFERENCES Categories(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================
--- ЗАПОЛНЕНИЕ ТОВАРОВ (разные сценарии для демонстрации)
+-- ЗАПОЛНЕНИЕ ТОВАРОВ
 -- ============================================
 
--- Товары со скидкой >15% (будет фиолетовый фон #483D8B)
-INSERT INTO Products (name, category_id, description, manufacturer, supplier, price, unit, count, discount, image_path) VALUES
+-- Товары со скидкой >15% (синий фон в приложении)
+INSERT INTO Products (name, category_id, description, manufacturer, supplier, price, unit, count, discount) VALUES
 ('Кроссовки Nike Air Max', 1, 'Спортивные кроссовки с амортизацией Air Max. Подходят для бега и повседневной носки.', 
- 'Nike', 'ООО "СпортТорг"', 12999.00, 'пара', 25, 20, NULL),
+ 'Nike', 'ООО "СпортТорг"', 12999.00, 'пара', 25, 20),
  
 ('Зимняя куртка North Face', 2, 'Тёплая зимняя куртка с наполнителем из пуха. Водонепроницаемая ткань.', 
- 'The North Face', 'ИП "Экипировка"', 25999.00, 'шт', 12, 25, NULL),
+ 'The North Face', 'ИП "Экипировка"', 25999.00, 'шт', 12, 25),
  
 ('Беспроводные наушники Sony', 5, 'Bluetooth наушники с шумоподавлением. 30 часов работы без подзарядки.', 
- 'Sony', 'ООО "ТехноМир"', 15999.00, 'шт', 8, 18, NULL);
+ 'Sony', 'ООО "ТехноМир"', 15999.00, 'шт', 8, 18);
 
 -- Товары с обычной скидкой или без скидки
-INSERT INTO Products (name, category_id, description, manufacturer, supplier, price, unit, count, discount, image_path) VALUES
+INSERT INTO Products (name, category_id, description, manufacturer, supplier, price, unit, count, discount) VALUES
 ('Ботинки Timberland', 1, 'Классические кожаные ботинки. Износостойкая подошва, влагозащита.', 
- 'Timberland', 'ИП "Петров А.В."', 18999.00, 'пара', 15, 5, NULL),
+ 'Timberland', 'ИП "Петров А.В."', 18999.00, 'пара', 15, 5),
  
 ('Футболка Adidas', 2, 'Хлопковая футболка с логотипом. Дышащий материал.', 
- 'Adidas', 'ООО "СпортТорг"', 2999.00, 'шт', 50, 0, NULL),
+ 'Adidas', 'ООО "СпортТорг"', 2999.00, 'шт', 50, 0),
  
 ('Сандалии Crocs', 1, 'Летние сандалии из лёгкого материала. Анатомическая стелька.', 
- 'Crocs', 'ООО "ЛетоСтиль"', 3999.00, 'пара', 30, 10, NULL),
+ 'Crocs', 'ООО "ЛетоСтиль"', 3999.00, 'пара', 30, 10),
  
 ('Рюкзак Herschel', 3, 'Городской рюкзак с отделением для ноутбука. Объём 25 литров.', 
- 'Herschel Supply Co.', 'ООО "СтильМаркет"', 7999.00, 'шт', 20, 0, 'backpack.jpg');
+ 'Herschel Supply Co.', 'ООО "СтильМаркет"', 7999.00, 'шт', 20, 0);
 
--- Товары, которых нет на складе (будет серый фон)
-INSERT INTO Products (name, category_id, description, manufacturer, supplier, price, unit, count, discount, image_path) VALUES
+-- Товары, которых нет на складе (серый фон)
+INSERT INTO Products (name, category_id, description, manufacturer, supplier, price, unit, count, discount) VALUES
 ('Умные часы Apple Watch', 5, 'Смарт-часы с функцией ЭКГ и отслеживанием тренировок.', 
- 'Apple', 'ООО "ТехноМир"', 45999.00, 'шт', 0, 5, NULL),
+ 'Apple', 'ООО "ТехноМир"', 45999.00, 'шт', 0, 5),
  
-('Кожаный ремень', 3, 'Классический кожаный ремень. Ширина 3.5 см, пряжка из нержавеющей стали.', 
- 'Calvin Klein', 'ООО "МодаСтиль"', 4999.00, 'шт', 0, 0, NULL),
+('Кожаный ремень Calvin Klein', 3, 'Классический кожаный ремень. Ширина 3.5 см, пряжка из нержавеющей стали.', 
+ 'Calvin Klein', 'ООО "МодаСтиль"', 4999.00, 'шт', 0, 0),
  
 ('Спортивный костюм Puma', 4, 'Костюм для тренировок из влагоотводящей ткани.', 
- 'Puma', 'ООО "СпортТорг"', 8999.00, 'шт', 0, 15, NULL);
+ 'Puma', 'ООО "СпортТорг"', 8999.00, 'шт', 0, 15);
 
 -- Товары без скидки с большим количеством
-INSERT INTO Products (name, category_id, description, manufacturer, supplier, price, unit, count, discount, image_path) VALUES
+INSERT INTO Products (name, category_id, description, manufacturer, supplier, price, unit, count, discount) VALUES
 ('Носки спортивные (набор 3 пары)', 4, 'Носки из хлопка с усиленной пяткой и мысом.', 
- 'Nike', 'ООО "СпортТорг"', 999.00, 'набор', 100, 0, NULL),
+ 'Nike', 'ООО "СпортТорг"', 999.00, 'набор', 100, 0),
  
-('Кепка бейсболка', 3, 'Классическая бейсболка с регулируемым размером.', 
- 'New Era', 'ООО "МодаСтиль"', 2499.00, 'шт', 45, 0, NULL),
+('Кепка бейсболка New Era', 3, 'Классическая бейсболка с регулируемым размером.', 
+ 'New Era', 'ООО "МодаСтиль"', 2499.00, 'шт', 45, 0),
  
-('Шорты для бега', 4, 'Лёгкие шорты с внутренними трусами. Быстросохнущий материал.', 
- 'Under Armour', 'ООО "СпортТорг"', 3499.00, 'шт', 35, 0, NULL);
+('Шорты для бега Under Armour', 4, 'Лёгкие шорты с внутренними трусами. Быстросохнущий материал.', 
+ 'Under Armour', 'ООО "СпортТорг"', 3499.00, 'шт', 35, 0);
 
 -- ============================================
--- ДОПОЛНИТЕЛЬНЫЕ ТАБЛИЦЫ (на будущее)
+-- ТАБЛИЦА ЗАКАЗОВ (для будущего расширения)
 -- ============================================
-
--- Таблица заказов
 CREATE TABLE Orders (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -515,7 +574,9 @@ CREATE TABLE Orders (
     FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Таблица позиций в заказе
+-- ============================================
+-- ТАБЛИЦА ПОЗИЦИЙ ЗАКАЗА (для будущего расширения)
+-- ============================================
 CREATE TABLE OrderItems (
     id INT AUTO_INCREMENT PRIMARY KEY,
     order_id INT NOT NULL,
@@ -526,18 +587,6 @@ CREATE TABLE OrderItems (
     FOREIGN KEY (product_id) REFERENCES Products(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Таблица корзины
-CREATE TABLE Cart (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    product_id INT NOT NULL,
-    quantity INT NOT NULL DEFAULT 1 CHECK (quantity > 0),
-    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE,
-    FOREIGN KEY (product_id) REFERENCES Products(id) ON DELETE CASCADE,
-    UNIQUE KEY unique_cart (user_id, product_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
 -- ============================================
 -- ПРОВЕРОЧНЫЕ ЗАПРОСЫ
 -- ============================================
@@ -545,19 +594,18 @@ CREATE TABLE Cart (
 -- Показать всех пользователей
 SELECT * FROM Users;
 
--- Показать товары с категориями
+-- Показать товары с категориями и статусом
 SELECT 
-    p.id,
-    p.name AS 'Название',
+    p.name AS 'Название товара',
     c.name AS 'Категория',
     p.price AS 'Цена',
     p.count AS 'Остаток',
     p.discount AS 'Скидка %',
     CASE 
-        WHEN p.count = 0 THEN 'Нет в наличии'
-        WHEN p.discount > 15 THEN 'Большая скидка'
-        WHEN p.discount > 0 THEN 'Есть скидка'
-        ELSE 'Обычная цена'
+        WHEN p.count = 0 THEN '❌ Нет в наличии'
+        WHEN p.discount > 15 THEN '🔥 Большая скидка'
+        WHEN p.discount > 0 THEN '💰 Есть скидка'
+        ELSE '✓ В наличии'
     END AS 'Статус'
 FROM Products p
 LEFT JOIN Categories c ON p.category_id = c.id
@@ -568,6 +616,7 @@ SELECT
     COUNT(*) AS 'Всего товаров',
     SUM(count) AS 'Общий остаток',
     AVG(price) AS 'Средняя цена',
-    COUNT(CASE WHEN discount > 15 THEN 1 END) AS 'Товаров со скидкой >15%',
+    COUNT(CASE WHEN discount > 15 THEN 1 END) AS 'Товаров с большой скидкой',
     COUNT(CASE WHEN count = 0 THEN 1 END) AS 'Товаров нет в наличии'
 FROM Products;
+    
